@@ -278,14 +278,14 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
         
         // Taken from here https://docs.arbitrum.io/for-devs/troubleshooting-building#what-is-a-retryable-tickets-submission-fee-how-can-i-calculate-it-what-happens-if-i-the-fee-i-provide-is-insufficient
         uint256 maxSubmissionCost = inbox.calculateRetryableSubmissionFee(data.length, BLOCK_BASE_FEE);
-        uint256 arbFee = arbGasFee(maxSubmissionCost);
+        uint256 arbitrumFee = arbitrumGasFee(maxSubmissionCost);
         uint256 arbitrationCost = arbitrator.arbitrationCost(arbitratorExtraData);
-        require(msg.value >= arbitrationCost + arbFee, "Deposit value too low");
+        require(msg.value >= arbitrationCost + arbitrumFee, "Deposit value too low");
 
         arbitration.status = Status.Requested;
-        arbitration.deposit = uint248(msg.value - arbFee);
+        arbitration.deposit = uint248(msg.value - arbitrumFee);
 
-        uint256 ticketID = inbox.createRetryableTicket{value: arbFee}(
+        uint256 ticketID = inbox.createRetryableTicket{value: arbitrumFee}(
             homeProxy,
             L2_CALL_VALUE,
             maxSubmissionCost,
@@ -378,16 +378,16 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
         bytes memory data = abi.encodeWithSelector(methodSelector, _questionID, _requester);
 
         uint256 maxSubmissionCost = inbox.calculateRetryableSubmissionFee(data.length, BLOCK_BASE_FEE);
-        uint256 arbFee = arbGasFee(maxSubmissionCost);
-        require(msg.value >= arbFee, "Should cover arbitrum fee");
+        uint256 arbitrumFee = arbitrumGasFee(maxSubmissionCost);
+        require(msg.value >= arbitrumFee, "Should cover arbitrum fee");
         uint256 deposit = arbitration.deposit;
 
         delete arbitrationRequests[arbitrationID][_requester];
-        uint256 surplusValue = msg.value - arbFee;
+        uint256 surplusValue = msg.value - arbitrumFee;
         payable(msg.sender).send(surplusValue);
         payable(_requester).send(deposit);
 
-        uint256 ticketID = inbox.createRetryableTicket{value: arbFee}(
+        uint256 ticketID = inbox.createRetryableTicket{value: arbitrumFee}(
             homeProxy,
             L2_CALL_VALUE,
             maxSubmissionCost,
@@ -594,12 +594,12 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
         bytes memory data = abi.encodeWithSelector(methodSelector, _questionID, bytes32(realitioRuling));
 
         uint256 maxSubmissionCost = inbox.calculateRetryableSubmissionFee(data.length, BLOCK_BASE_FEE);
-        uint256 arbFee = arbGasFee(maxSubmissionCost);
-        require(msg.value >= arbFee, "Should cover arbitrum fee");
+        uint256 arbitrumFee = arbitrumGasFee(maxSubmissionCost);
+        require(msg.value >= arbitrumFee, "Should cover arbitrum fee");
 
         arbitration.status = Status.Relayed;
 
-        uint256 ticketID = inbox.createRetryableTicket{value: arbFee}(
+        uint256 ticketID = inbox.createRetryableTicket{value: arbitrumFee}(
             homeProxy,
             L2_CALL_VALUE,
             maxSubmissionCost,
@@ -613,7 +613,7 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
         emit RetryableTicketCreated(ticketID);
         emit RulingRelayed(_questionID, bytes32(realitioRuling));
 
-        if (msg.value - arbFee > 0) payable(msg.sender).send(msg.value - arbFee); // Sending extra value back to contributor. It is the user's responsibility to accept ETH.
+        if (msg.value - arbitrumFee > 0) payable(msg.sender).send(msg.value - arbitrumFee); // Sending extra value back to contributor. It is the user's responsibility to accept ETH.
     }
 
     /* External Views */
@@ -800,9 +800,9 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
      * is greater than or equal to maxSubmissionCost + l2CallValue + gasLimit * maxFeePerGas.
      * https://docs.arbitrum.io/how-arbitrum-works/arbos/l1-l2-messaging
      * @param _maxSubmissionCost Cost to calculate a retryable ticket on L1.
-     * @return arbFee Total arbitrum fee required to pass a message L1->L2.
+     * @return arbitrumFee Total arbitrum fee required to pass a message L1->L2.
      */
-    function arbGasFee(uint256 _maxSubmissionCost) private view returns (uint256 arbFee) {
-        arbFee = _maxSubmissionCost + L2_CALL_VALUE + l2GasLimit * gasPriceBid;
+    function arbitrumGasFee(uint256 _maxSubmissionCost) private view returns (uint256 arbitrumFee) {
+        arbitrumFee = _maxSubmissionCost + L2_CALL_VALUE + l2GasLimit * gasPriceBid;
     }
 }
