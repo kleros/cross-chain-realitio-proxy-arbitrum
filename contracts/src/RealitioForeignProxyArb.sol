@@ -795,7 +795,7 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
     }
 
     /**
-     * @notice Maps external (arbitrator side) dispute id to local (arbitrable) dispute id.
+     * @notice Gets the required fee to process the message on L2.
      * @dev Logic that checks if the user have enough funds to create a ticket. This is done by checking if the msg.value provided by the user 
      * is greater than or equal to maxSubmissionCost + l2CallValue + gasLimit * maxFeePerGas.
      * https://docs.arbitrum.io/how-arbitrum-works/arbos/l1-l2-messaging
