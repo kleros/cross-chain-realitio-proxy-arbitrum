@@ -11,10 +11,9 @@
 pragma solidity 0.8.25;
 
 import {IDisputeResolver, IArbitrator} from "@kleros/dispute-resolver-interface-contract/contracts/IDisputeResolver.sol";
-import {IForeignArbitrationProxy, IHomeArbitrationProxy} from "./ArbitrationProxyInterfaces.sol";
-// TODO: use interface instead
-import "@arbitrum/nitro-contracts/src/bridge/Inbox.sol";
-import "@arbitrum/nitro-contracts/src/bridge/Outbox.sol";
+import {IForeignArbitrationProxy, IHomeArbitrationProxy} from "./interfaces/ArbitrationProxyInterfaces.sol";
+import "./interfaces/IInbox.sol";
+import "./interfaces/IOutbox.sol";
 
 /**
  * @title Arbitration proxy for Realitio on Ethereum side (A.K.A. the Foreign Chain).
@@ -22,12 +21,12 @@ import "@arbitrum/nitro-contracts/src/bridge/Outbox.sol";
  */
 contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
     /* Constants */
-    // The number of choices for the arbitrator.
-    uint256 public constant NUMBER_OF_CHOICES_FOR_ARBITRATOR = type(uint256).max;
+    uint256 public constant NUMBER_OF_CHOICES_FOR_ARBITRATOR = type(uint256).max; // The number of choices for the arbitrator.
     uint256 public constant REFUSE_TO_ARBITRATE_REALITIO = type(uint256).max; // Constant that represents "Refuse to rule" in realitio format.
     uint256 public constant MULTIPLIER_DIVISOR = 10000; // Divisor parameter for multipliers.
     uint256 public constant META_EVIDENCE_ID = 0; // The ID of the MetaEvidence for disputes.
     uint256 private constant L2_CALL_VALUE = 0; // The msg.value for L2 tx. Always 0.
+    uint256 private constant BLOCK_BASE_FEE = 0; // Block baseFee is set to 0 to use current block's baseFee.
 
     /* Storage */
 
@@ -63,15 +62,25 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
     }
 
     address public deployer = msg.sender;
-    IArbitrator public immutable arbitrator; // The address of the arbitrator. TRUSTED.
+    // TODO: make it immutable after test.
+    IArbitrator public arbitrator; // The address of the arbitrator. TRUSTED.
     bytes public arbitratorExtraData; // The extra data used to raise a dispute in the arbitrator.
     address public homeProxy; // Proxy on L2.
-    IInbox public inbox;
-    // TODO: Determine values and make constants. Check with deliberately low values to test fallback from Arbitrum.
-    uint256 public l2GasLimit;
-    uint256 public gasPriceBid;
+    IInbox public inbox; // Arbitrum inbox contract.
+    
+    // Note that setting gasPriceBid to 0 will result in immediate revert on L1.
+    // If the values are set too low the tx won't redeed itself automatically on L2. The deposit will be reimbursed and manual redeem will be activated.
+    // It can be done here https://retryable-dashboard.arbitrum.io/tx
+    // Preferred values for gasLimit and gasPriceBid are 1500000 and 1000000000 respectively. This values are greatly higher than required amount to ensure automatic redeem.
+    uint256 public l2GasLimit; // Gas limit for tx on L2.
+    uint256 public gasPriceBid; // Gas price bid for tx on L2.
 
-    uint256 public surplusAmount; // The amount to add to arbitration fees to cover for Arbitrum fees. The leftover will be reimbursed. This is required for Realtio UI.
+    // The amount to add to arbitration fees to cover for Arbitrum fees. The leftover will be reimbursed. This is required for Realtio UI.
+    // Surplus amount covers submission cost for retryable ticket on L1 + gasLimit * gasPriceBid.
+    // Submission cost is based on the length of the passed message and current gas fees. It's usually greatly lower than 0.05 but it's preferred to use this value
+    // to account for potential gas fee spikes. It shouldn't be an issue since 0.05 is a relatively low value compared to Kleros arbitration cost
+    // and the leftover will be reimbursed anyway.
+    uint256 public surplusAmount; 
 
     // Multipliers are in basis points.
     uint256 public immutable winnerMultiplier; // Multiplier for calculating the appeal fee that must be paid for the answer that was chosen by the arbitrator in the previous round.
@@ -122,7 +131,7 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
         arbitrator = _arbitrator;
         arbitratorExtraData = _arbitratorExtraData;
         inbox = IInbox(_inbox);
-        surplusAmount = _surplusAmount; // TODO: determine the surplus. Needs to account for different functions and potential fee increase.
+        surplusAmount = _surplusAmount;
         l2GasLimit = _l2GasLimit;
         gasPriceBid = _gasPriceBid;
         winnerMultiplier = _winnerMultiplier;
@@ -142,10 +151,10 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
     function setHomeProxy(address _homeProxy) external {
         require(msg.sender == deployer, "Only deployer can");
         homeProxy = _homeProxy;
-        //deployer = address(0); // Temporarily leave governor on
+        deployer = address(0);
     }
 
-    // TODO: remove these 3 after testing. Temp functions.
+    // TODO: remove these 4 after testing. Temp functions. Keep the governance as it's better to have options and we can redeploy if needed anyway
     function changeL2GasLimit(uint256 _l2GasLimit) external {
         require(msg.sender == deployer, "Only deployer can");
         l2GasLimit = _l2GasLimit;
@@ -159,6 +168,12 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
     function changeSurplus(uint256 _surplus) external {
         require(msg.sender == deployer, "Only deployer can");
         surplusAmount = _surplus;
+    }
+
+    function changeArbitrator(IArbitrator _arbitrator, string memory _metaEvidence) external {
+        require(msg.sender == deployer, "Only deployer can");
+        arbitrator = _arbitrator;
+        emit MetaEvidence(META_EVIDENCE_ID, _metaEvidence);
     }
 
     // ************************ //
@@ -177,15 +192,14 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
         ArbitrationRequest storage arbitration = arbitrationRequests[uint256(_questionID)][msg.sender];
         require(arbitration.status == Status.None, "Arbitration already requested");
 
-
         bytes4 methodSelector = IHomeArbitrationProxy.receiveArbitrationRequest.selector;
         bytes memory data = abi.encodeWithSelector(methodSelector, _questionID, msg.sender, _maxPrevious);
         
-        uint256 maxSubmissionCost = inbox.calculateRetryableSubmissionFee(data.length, 0); // Block baseFee is set to 0 to use current block's baseFee.
+        // Taken from here https://docs.arbitrum.io/for-devs/troubleshooting-building#what-is-a-retryable-tickets-submission-fee-how-can-i-calculate-it-what-happens-if-i-the-fee-i-provide-is-insufficient
+        uint256 maxSubmissionCost = inbox.calculateRetryableSubmissionFee(data.length, BLOCK_BASE_FEE);
         uint256 arbFee = arbGasFee(maxSubmissionCost);
         uint256 arbitrationCost = arbitrator.arbitrationCost(arbitratorExtraData);
-        require(msg.value >= arbitrationCost + arbFee, "Deposit value too low"); // TODO: allow to overpay the arbitrum fee in case of fee increase.
-        // Note in this case arbitration cost won't be overpaid since all the excessive value wil cover the fee. It should be fine since arbitration cost will be prompted through Reality UI anyway 
+        require(msg.value >= arbitrationCost + arbFee, "Deposit value too low");
 
         arbitration.status = Status.Requested;
         arbitration.deposit = uint248(msg.value - arbFee);
@@ -282,7 +296,7 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
         bytes4 methodSelector = IHomeArbitrationProxy.receiveArbitrationFailure.selector;
         bytes memory data = abi.encodeWithSelector(methodSelector, _questionID, _requester);
 
-        uint256 maxSubmissionCost = inbox.calculateRetryableSubmissionFee(data.length, 0); // Block baseFee is set to 0 to use current block's baseFee.
+        uint256 maxSubmissionCost = inbox.calculateRetryableSubmissionFee(data.length, BLOCK_BASE_FEE);
         uint256 arbFee = arbGasFee(maxSubmissionCost);
         require(msg.value >= arbFee, "Should cover arbitrum fee");
         uint256 deposit = arbitration.deposit;
@@ -491,7 +505,7 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
         bytes4 methodSelector = IHomeArbitrationProxy.receiveArbitrationAnswer.selector;
         bytes memory data = abi.encodeWithSelector(methodSelector, _questionID, bytes32(realitioRuling));
 
-        uint256 maxSubmissionCost = inbox.calculateRetryableSubmissionFee(data.length, 0); // Block baseFee is set to 0 to use current block's baseFee.
+        uint256 maxSubmissionCost = inbox.calculateRetryableSubmissionFee(data.length, BLOCK_BASE_FEE);
         uint256 arbFee = arbGasFee(maxSubmissionCost);
         require(msg.value >= arbFee, "Should cover arbitrum fee");
 
@@ -692,8 +706,15 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
         return disputeIDToDisputeDetails[_externalDisputeID].arbitrationID;
     }
 
-    // TODO: change to private in production
-    function arbGasFee(uint256 _maxSubmissionCost) public view returns (uint256 arbFee) {
+    /**
+     * @notice Maps external (arbitrator side) dispute id to local (arbitrable) dispute id.
+     * @dev Logic that checks if the user have enough funds to create a ticket. This is done by checking if the msg.value provided by the user 
+     * is greater than or equal to maxSubmissionCost + l2CallValue + gasLimit * maxFeePerGas.
+     * https://docs.arbitrum.io/how-arbitrum-works/arbos/l1-l2-messaging
+     * @param _maxSubmissionCost Cost to calculate a retryable ticket on L1.
+     * @return arbFee Total arbitrum fee required to pass a message L1->L2.
+     */
+    function arbGasFee(uint256 _maxSubmissionCost) private view returns (uint256 arbFee) {
         arbFee = _maxSubmissionCost + L2_CALL_VALUE + l2GasLimit * gasPriceBid;
     }
 }
