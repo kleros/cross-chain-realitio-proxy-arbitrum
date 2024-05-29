@@ -10,8 +10,8 @@
 
 pragma solidity 0.8.25;
 
-import "./RealitioInterface.sol";
-import {IForeignArbitrationProxy, IHomeArbitrationProxy} from "./ArbitrationProxyInterfaces.sol";
+import "./interfaces/RealitioInterface.sol";
+import {IForeignArbitrationProxy, IHomeArbitrationProxy} from "./interfaces/ArbitrationProxyInterfaces.sol";
 import "@arbitrum/nitro-contracts/src/precompiles/ArbSys.sol";
 import "@arbitrum/nitro-contracts/src/libraries/AddressAliasHelper.sol";
 
