@@ -1,7 +1,7 @@
 const Web3 = require("web3");
 const RealitioForeignArbitrationProxy = require("@kleros/cross-chain-realitio-contracts/artifacts/src/RealitioForeignProxyArb.sol/RealitioForeignProxyArb.json");
 const RealitioHomeArbitrationProxy = require("@kleros/cross-chain-realitio-contracts/artifacts/src/RealitioHomeProxyArb.sol/RealitioHomeProxyArb.json");
-const RealitioInterface = require("@kleros/cross-chain-realitio-contracts/artifacts/src/RealitioInterface.sol/RealitioInterface.json");
+const RealitioInterface = require("@kleros/cross-chain-realitio-contracts/artifacts/src/interfaces/RealitioInterface.sol/RealitioInterface.json");
 const RealitioQuestion = require("@realitio/realitio-lib/formatters/question.js");
 
 const isNil = (value) => value === undefined || value === null;

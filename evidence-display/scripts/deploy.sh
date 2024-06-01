@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 function usage {
   echo "./$(basename $0) [-v] [-s]"
   echo ""
@@ -50,15 +50,6 @@ build-app() {
   if [ $SKIP_BUILD -eq 0 ]; then
     if [ $VERBOSE -eq 1 ]; then
       echo 'Building the app...'
-
-      [ -f .env ] && source .env
-      echo ""
-      echo -e "Using current env vars:\n"
-      echo -e "\tREACT_APP_FOREIGN_CHAIN_RPC_ENDPOINT:" ${REACT_APP_FOREIGN_CHAIN_RPC_ENDPOINT}
-      echo -e "\tREACT_APP_HOME_CHAIN_RPC_ENDPOINT:" ${REACT_APP_HOME_CHAIN_RPC_ENDPOINT}
-      echo -e "\tREACT_APP_REALITY_ETH_URL_TEMPLATE:" ${REACT_APP_REALITY_ETH_URL_TEMPLATE}
-      echo ""
-
     fi
 
     [ $VERBOSE -eq 1 ] && YARN_OPTS='' || YARN_OPTS='-s'
