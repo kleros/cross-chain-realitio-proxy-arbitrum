@@ -64,7 +64,7 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
     }
 
     address public deployer = msg.sender;
-    address public homeProxy; // Proxy on L2.
+    address public immutable homeProxy; // Proxy on L2.
 
     address public governor; // Governor of the contract (e.g KlerosGovernor).
     IArbitrator public arbitrator; // The address of the arbitrator. TRUSTED.
@@ -114,6 +114,7 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
 
     /**
      * @notice Creates an arbitration proxy on the foreign chain (L1).
+     * @param _homeProxy Proxy on L2.
      * @param _governor Governor of the contract.
      * @param _arbitrator Arbitrator contract address.
      * @param _arbitratorExtraData The extra data used to raise a dispute in the arbitrator.
@@ -122,11 +123,13 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
      * @param _l2GasLimit L2 gas limit 
      * @param _gasPriceBid Max gas price L2.
      * @param _metaEvidence The URI of the meta evidence file.
-     * @param _winnerMultiplier Multiplier for calculating the appeal cost of the winning answer.
-     * @param _loserMultiplier Multiplier for calculating the appeal cost of the losing answer.
-     * @param _loserAppealPeriodMultiplier Multiplier for calculating the appeal period for the losing answer.
+     * @param _multipliers Appeal multipliers:
+     *  - Multiplier for calculating the appeal cost of the winning answer.
+     *  - Multiplier for calculating the appeal cost of the losing answer.
+     *  - Multiplier for calculating the appeal period for the losing answer.
      */
     constructor(
+        address _homeProxy,
         address _governor,
         IArbitrator _arbitrator,
         bytes memory _arbitratorExtraData,
@@ -135,10 +138,9 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
         uint256 _l2GasLimit,
         uint256 _gasPriceBid,
         string memory _metaEvidence,
-        uint256 _winnerMultiplier,
-        uint256 _loserMultiplier,
-        uint256 _loserAppealPeriodMultiplier
+        uint256[3] memory _multipliers
     ) {
+        homeProxy = _homeProxy;
         governor = _governor;
         arbitrator = _arbitrator;
         arbitratorExtraData = _arbitratorExtraData;
@@ -146,25 +148,14 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
         surplusAmount = _surplusAmount;
         l2GasLimit = _l2GasLimit;
         gasPriceBid = _gasPriceBid;
-        winnerMultiplier = _winnerMultiplier;
-        loserMultiplier = _loserMultiplier;
-        loserAppealPeriodMultiplier = _loserAppealPeriodMultiplier;
+        winnerMultiplier = _multipliers[0];
+        loserMultiplier = _multipliers[1];
+        loserAppealPeriodMultiplier = _multipliers[2];
 
         emit MetaEvidence(metaEvidenceUpdates, _metaEvidence);
     }
 
     /* External and public */
-
-    /**
-     * @notice Sets home proxy. Can only be done by deployer.
-     * @param _homeProxy Address of the proxy on L2.
-     */
-    // TODO: move to constructor
-    function setHomeProxy(address _homeProxy) external {
-        require(msg.sender == deployer, "Only deployer can");
-        homeProxy = _homeProxy;
-        deployer = address(0);
-    }
 
     /**
      * @notice Changes the governor of the contract.

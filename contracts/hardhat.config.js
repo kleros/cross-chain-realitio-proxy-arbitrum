@@ -1,6 +1,7 @@
 require("dotenv/config");
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
+require("@nomicfoundation/hardhat-verify");
 require("@nomiclabs/hardhat-web3");
 
 module.exports = {
@@ -25,15 +26,38 @@ module.exports = {
       url: `https://sepolia.infura.io/v3/${process.env.INFURA_API_KEY}`,
       accounts: [process.env.PRIVATE_KEY],
     },
+    arbitrumSepolia: {
+      chainId: 421614,
+      url: `https://arbitrum-sepolia.infura.io/v3/${process.env.INFURA_API_KEY}`,
+      accounts: [process.env.PRIVATE_KEY],
+    },
     /*
     mainnet: {
       chainId: 1,
       url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
       accounts: [process.env.PRIVATE_KEY],
     },
+    arbitrumOne: {
+      chainId: 42161,
+      url: 'https://arb1.arbitrum.io/rpc',
+      accounts: [process.env.PRIVATE_KEY]
+    },
     */
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY
-  }
+    apiKey: {
+      sepolia: process.env.ETHERSCAN_API_KEY,
+      arbitrumSepolia: process.env.ARBITSCAN_API_KEY,
+    },
+    customChains: [
+      {
+          network: "arbitrumSepolia",
+          chainId: 421614,
+          urls: {
+              apiURL: "https://api-sepolia.arbiscan.io/api",
+              browserURL: "https://sepolia.arbiscan.io/",
+          },
+      },
+    ],
+  },
 };
