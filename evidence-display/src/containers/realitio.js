@@ -3,7 +3,7 @@ import Web3 from "web3";
 
 import RealitioForeignArbitrationProxy from "@kleros/cross-chain-realitio-contracts/artifacts/src/RealitioForeignProxyArb.sol/RealitioForeignProxyArb.json";
 import RealitioHomeArbitrationProxy from "@kleros/cross-chain-realitio-contracts/artifacts/src/RealitioHomeProxyArb.sol/RealitioHomeProxyArb.json";
-import RealitioInterface from "@kleros/cross-chain-realitio-contracts/artifacts/src/RealitioInterface.sol/RealitioInterface.json";
+import RealitioInterface from "@kleros/cross-chain-realitio-contracts/artifacts/src/interfaces/RealitioInterface.sol/RealitioInterface.json";
 
 import RealityLogo from "../assets/images/reality_eth_logo.png";
 import { populatedJSONForTemplate } from "@reality.eth/reality-eth-lib/formatters/question";
