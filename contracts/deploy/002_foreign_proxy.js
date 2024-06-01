@@ -1,5 +1,4 @@
-const { ethers } = require("hardhat");
-
+const FOREIGN_CHAIN_IDS = [11155111, 1];
 const paramsByChainId = {
   11155111: {
     arbitrator: "0x90992fb4E15ce0C59aEFfb376460Fda4Ee19C879", // Kleros Liquid on Sepolia
@@ -25,16 +24,17 @@ const winnerMultiplier = 3000;
 const loserMultiplier = 7000;
 const loserAppealPeriodMultiplier = 5000;
 
-async function main() {
-  const { providers } = ethers;
-
+async function deployForeignProxy({ deployments, getChainId, ethers, config }) {
   console.log("Starting foreign proxy deployment..");
-  const chainId = hre.network.config.chainId;
+
+  const { deploy } = deployments;
+  const { providers } = ethers;
+  const chainId = await getChainId();
   const { arbitrator, arbitratorExtraData, inbox, metaEvidence } = paramsByChainId[chainId];
 
   const homeNetworks = {
-    1: hre.config.networks.arbitrumOne,
-    11155111: hre.config.networks.arbitrumSepolia,
+    1: config.networks.arbitrumOne,
+    11155111: config.networks.arbitrumSepolia,
   };
 
   const { url } = homeNetworks[chainId];
@@ -58,25 +58,26 @@ async function main() {
     governor = (await ethers.getSigners())[0].address;
   }
 
-  const ForeignProxy = await ethers.getContractFactory("RealitioForeignProxyArb");
-  const foreignProxy = await ForeignProxy.deploy(
-    homeProxy,
-    governor,
-    arbitrator,
-    arbitratorExtraData,
-    inbox,
-    surplus,
-    l2GasLimit,
-    gasPriceBid,
-    metaEvidence,
-    [winnerMultiplier, loserMultiplier, loserAppealPeriodMultiplier]
-  );
-  await foreignProxy.deployed();
+  const foreignProxy = await deploy("RealitioForeignProxyArb", {
+    from: account.address,
+    args: [
+      homeProxy,
+      governor,
+      arbitrator,
+      arbitratorExtraData,
+      inbox,
+      surplus,
+      l2GasLimit,
+      gasPriceBid,
+      metaEvidence,
+      [winnerMultiplier, loserMultiplier, loserAppealPeriodMultiplier],
+    ],
+  });
 
   console.log(`Foreign proxy contract was successfully deployed at ${foreignProxy.address}`);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+deployForeignProxy.tags = ["ForeignChain"];
+deployForeignProxy.skip = async ({ getChainId }) => !FOREIGN_CHAIN_IDS.includes(Number(await getChainId()));
+
+module.exports = deployForeignProxy;

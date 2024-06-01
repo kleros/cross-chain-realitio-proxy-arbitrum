@@ -1,5 +1,4 @@
-const { ethers } = require("hardhat");
-
+const HOME_CHAIN_IDS = [42161, 421614];
 const paramsByChainId = {
   421614: {
     // Arbitrum Sepolia's chain ID
@@ -15,16 +14,17 @@ const paramsByChainId = {
 const metadata =
   '{"tos":"ipfs://QmNV5NWwCudYKfiHuhdWxccrPyxs4DnbLGQace2oMKHkZv/Question_Resolution_Policy.pdf", "foreignProxy":true}'; // Same for all chains.
 
-async function main() {
+async function deployHomeProxy({ deployments, getChainId, ethers, config }) {
   console.log(`Running deployment script for home proxy contract on Arbitrum`);
 
+  const { deploy } = deployments;
   const { providers } = ethers;
   const foreignNetworks = {
-    42161: hre.config.networks.mainnet,
-    421614: hre.config.networks.sepolia,
+    42161: config.networks.mainnet,
+    421614: config.networks.sepolia,
   };
 
-  const chainId = hre.network.config.chainId;
+  const chainId = await getChainId();
   const { url } = foreignNetworks[chainId];
   const provider = new providers.JsonRpcProvider(url);
   const [account] = await ethers.getSigners();
@@ -40,17 +40,15 @@ async function main() {
 
   const { foreignChainId, realitio } = paramsByChainId[chainId];
 
-  const artifact = await ethers.getContractFactory("RealitioHomeProxyArb");
-
-  const homeProxy = await artifact.deploy(realitio, foreignChainId, foreignProxy, metadata);
+  const homeProxy = await deploy("RealitioHomeProxyArb", {
+    from: account.address,
+    args: [realitio, foreignChainId, foreignProxy, metadata],
+  });
   const contractAddress = homeProxy.address;
   console.log(`RealitioHomeProxyArb was deployed to ${contractAddress}`);
 }
 
-// Execute the deployment script
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+deployHomeProxy.tags = ["HomeChain"];
+deployHomeProxy.skip = async ({ getChainId }) => !HOME_CHAIN_IDS.includes(Number(await getChainId()));
+
+module.exports = deployHomeProxy;
