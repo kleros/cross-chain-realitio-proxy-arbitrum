@@ -3,6 +3,7 @@ require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
 require("@nomicfoundation/hardhat-verify");
 require("@nomiclabs/hardhat-web3");
+require("hardhat-deploy");
 
 const exec = require("./tasks/exec.js");
 

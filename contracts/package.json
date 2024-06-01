@@ -6,8 +6,8 @@
   "license": "MIT",
   "scripts": {
     "build": "hardhat compile",
-    "deploy:staging": "hardhat compile && hardhat run .\\deploy\\001_home_proxy.js --network arbitrumSepolia && hardhat run .\\deploy\\002_foreign_proxy.js --network sepolia",
-    "deploy-production": "hardhat compile && hardhat run .\\deploy\\001_home_proxy.js --network arbitrumOne && hardhat run .\\deploy\\002_foreign_proxy.js --network mainnet",
+    "deploy:staging": "hardhat deploy --network arbitrumSepolia && hardhat deploy --network sepolia",
+    "deploy-production": "hardhat deploy --network arbitrumOne && hardhat deploy --network mainnet",
     "exec:staging": "hardhat exec --network arbitrumSepolia",
     "exec:production": "hardhat exec --network arbitrumOne"
   },
@@ -24,7 +24,8 @@
     "@nomiclabs/hardhat-waffle": "^2.0.0",
     "@nomiclabs/hardhat-web3": "^2.0.0",
     "ethers": "^5.7.1",
-    "hardhat": "^2.0.2"
+    "hardhat": "^2.0.2",
+    "hardhat-deploy": "^0.12.4"
   },
   "resolutions": {
     "**/eslint": "^7.30.0"
