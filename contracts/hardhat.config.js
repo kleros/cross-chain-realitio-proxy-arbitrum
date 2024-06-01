@@ -4,6 +4,14 @@ require("@nomiclabs/hardhat-ethers");
 require("@nomicfoundation/hardhat-verify");
 require("@nomiclabs/hardhat-web3");
 
+const exec = require("./tasks/exec.js");
+
+task('exec', "Execute msg on L1")
+  .addParam('txhash', 'Hash of txn that triggered and L2 to L1 message')
+  .setAction(async args => {
+    await exec(args.txhash)
+  })
+
 module.exports = {
   solidity: {
     version: "0.8.25",
