@@ -5,7 +5,11 @@
   "author": "Kleros",
   "license": "MIT",
   "scripts": {
-    "build": "hardhat compile"
+    "build": "hardhat compile",
+    "deploy:staging": "hardhat compile && hardhat run .\\deploy\\001_home_proxy.js --network arbitrumSepolia && hardhat run .\\deploy\\002_foreign_proxy.js --network sepolia",
+    "deploy-production": "hardhat compile && hardhat run .\\deploy\\001_home_proxy.js --network arbitrumOne && hardhat run .\\deploy\\002_foreign_proxy.js --network mainnet",
+    "exec:staging": "hardhat exec --network arbitrumSepolia",
+    "exec:production": "hardhat exec --network arbitrumOne"
   },
   "dependencies": {
     "@arbitrum/nitro-contracts": "^v1.0.2",
