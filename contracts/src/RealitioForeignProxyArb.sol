@@ -18,6 +18,7 @@ import "./interfaces/IOutbox.sol";
 /**
  * @title Arbitration proxy for Realitio on Ethereum side (A.K.A. the Foreign Chain).
  * @dev This contract is meant to be deployed to the Ethereum chains where Kleros is deployed.
+ * Example https://github.com/OffchainLabs/arbitrum-tutorials/blob/2c1b7d2db8f36efa496e35b561864c0f94123a5f/packages/greeter/contracts/ethereum/GreeterL1.sol
  */
 contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
     /* Constants */
@@ -63,7 +64,6 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
         uint256[] fundedAnswers; // Stores the answer choices that are fully funded.
     }
 
-    address public deployer = msg.sender;
     address public immutable homeProxy; // Proxy on L2.
 
     address public governor; // Governor of the contract (e.g KlerosGovernor).
@@ -98,6 +98,7 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
 
     event RetryableTicketCreated(uint256 indexed ticketId);
 
+    /// @dev https://github.com/OffchainLabs/arbitrum-tutorials/blob/2c1b7d2db8f36efa496e35b561864c0f94123a5f/packages/greeter/contracts/ethereum/GreeterL1.sol#L50
     modifier onlyL2Bridge() {
         IBridge bridge = inbox.bridge();
         require(msg.sender == address(bridge), "NOT_BRIDGE");
@@ -254,7 +255,6 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
      * @param _maxPrevious The maximum value of the current bond for the question. The arbitration request will get rejected if the current bond is greater than _maxPrevious. If set to 0, _maxPrevious is ignored.
      */
     function requestArbitration(bytes32 _questionID, uint256 _maxPrevious) external payable override {
-        require(homeProxy != address(0), "Home proxy is not set");
         require(!arbitrationIDToDisputeExists[uint256(_questionID)], "Dispute already created");
 
         ArbitrationRequest storage arbitration = arbitrationRequests[uint256(_questionID)][msg.sender];
