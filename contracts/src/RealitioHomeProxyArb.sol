@@ -19,6 +19,7 @@ import "@arbitrum/nitro-contracts/src/libraries/AddressAliasHelper.sol";
  * @title Arbitration proxy for Realitio on Arbitrum.
  * @dev This contract is meant to be deployed to L2 where Reality.eth is deployed.
  * https://docs.arbitrum.io/arbos/l2-to-l1-messaging
+ * Example https://github.com/OffchainLabs/arbitrum-tutorials/blob/2c1b7d2db8f36efa496e35b561864c0f94123a5f/packages/greeter/contracts/arbitrum/GreeterL2.sol
  */
 contract RealitioHomeProxyArb is IHomeArbitrationProxy {
     // Precompiled contract for L2 -> L1 communication
@@ -57,7 +58,7 @@ contract RealitioHomeProxyArb is IHomeArbitrationProxy {
     event L2ToL1TxCreated(uint256 indexed withdrawalId);
 
     /// @dev Foreign proxy uses its alias to make calls on L2.
-    modifier onlyForeignProxyAlias() {
+    modifier onlyForeignProxyAlias() virtual {
         require(msg.sender == AddressAliasHelper.applyL1ToL2Alias(foreignProxy), "Can only be called by foreign proxy");
         _;
     }
@@ -132,9 +133,7 @@ contract RealitioHomeProxyArb is IHomeArbitrationProxy {
 
         bytes4 selector = IForeignArbitrationProxy.receiveArbitrationAcknowledgement.selector;
         bytes memory data = abi.encodeWithSelector(selector, _questionID, _requester);
-        uint256 withdrawalId = ARB_SYS.sendTxToL1(foreignProxy, data);
-
-        emit L2ToL1TxCreated(withdrawalId);
+        sendToL1(data);
         emit RequestAcknowledged(_questionID, _requester);
     }
 
@@ -157,9 +156,7 @@ contract RealitioHomeProxyArb is IHomeArbitrationProxy {
 
         bytes4 selector = IForeignArbitrationProxy.receiveArbitrationCancelation.selector;
         bytes memory data = abi.encodeWithSelector(selector, _questionID, _requester);
-        uint256 withdrawalId = ARB_SYS.sendTxToL1(foreignProxy, data);
-
-        emit L2ToL1TxCreated(withdrawalId);
+        sendToL1(data);
         emit RequestCanceled(_questionID, _requester);
     }
 
@@ -232,5 +229,14 @@ contract RealitioHomeProxyArb is IHomeArbitrationProxy {
         request.status = Status.Finished;
 
         emit ArbitrationFinished(_questionID);
+    }
+
+    /**
+     * @notice Sends a message to L1.
+     * @param _data The data sent.
+     */
+    function sendToL1(bytes memory _data) internal virtual {
+        uint256 withdrawalId = ARB_SYS.sendTxToL1(foreignProxy, _data);
+        emit L2ToL1TxCreated(withdrawalId);
     }
 }
