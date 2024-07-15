@@ -92,7 +92,7 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
     uint256 public loserAppealPeriodMultiplier; // Multiplier for calculating the duration of the appeal period for the loser, in basis points.
 
     mapping(uint256 => mapping(address => ArbitrationRequest)) public arbitrationRequests; // Maps arbitration ID to its data. arbitrationRequests[uint(questionID)][requester].
-    mapping(uint256 => DisputeDetails) public disputeIDToDisputeDetails; // Maps external dispute ids to local arbitration ID and requester who was able to complete the arbitration request.
+    mapping(address => mapping(uint256 => DisputeDetails)) public arbitratorDisputeIDToDisputeDetails; // Maps external dispute ids from a particular arbitrator to local arbitration ID and requester who was able to complete the arbitration request.
     mapping(uint256 => bool) public arbitrationIDToDisputeExists; // Whether a dispute has already been created for the given arbitration ID or not.
     mapping(uint256 => address) public arbitrationIDToRequester; // Maps arbitration ID to the requester who was able to complete the arbitration request.
 
@@ -307,7 +307,7 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
             try
                 arbitration.arbitrator.createDispute{value: arbitrationCost}(NUMBER_OF_CHOICES_FOR_ARBITRATOR, arbitration.arbitratorExtraData)
             returns (uint256 disputeID) {
-                DisputeDetails storage disputeDetails = disputeIDToDisputeDetails[disputeID];
+                DisputeDetails storage disputeDetails = arbitratorDisputeIDToDisputeDetails[address(arbitration.arbitrator)][disputeID];
                 disputeDetails.arbitrationID = arbitrationID;
                 disputeDetails.requester = _requester;
 
@@ -550,7 +550,7 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
      * @param _ruling The ruling given by the arbitrator.
      */
     function rule(uint256 _disputeID, uint256 _ruling) external override {
-        DisputeDetails storage disputeDetails = disputeIDToDisputeDetails[_disputeID];
+        DisputeDetails storage disputeDetails = arbitratorDisputeIDToDisputeDetails[msg.sender][_disputeID];
         uint256 arbitrationID = disputeDetails.arbitrationID;
         address requester = disputeDetails.requester;
 
@@ -782,7 +782,12 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
      * @return localDisputeID Dispute id as in arbitrable contract.
      */
     function externalIDtoLocalID(uint256 _externalDisputeID) external view override returns (uint256) {
-        return disputeIDToDisputeDetails[_externalDisputeID].arbitrationID;
+        // Note that in case of arbitrator's change external dispute from the new arbitrator
+        // will overwrite the external dispute with the same ID from the old arbitrator,
+        // which will make the data related to the old arbitrator's dispute unaccessible in DisputeResolver's UI.
+        // It should be fine since the dispute will be closed anyway.
+        // Ideally we would want to have arbitrator's address as one of the parameters, but we can't break the interface.
+        return arbitratorDisputeIDToDisputeDetails[address(arbitrator)][_externalDisputeID].arbitrationID;
     }
 
     /**
