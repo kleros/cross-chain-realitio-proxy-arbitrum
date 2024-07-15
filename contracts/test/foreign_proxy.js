@@ -280,7 +280,7 @@ describe("Cross-chain arbitration with appeals", () => {
     expect(arbitration[1]).to.equal(0, "Deposit value should be empty");
     expect(arbitration[2]).to.equal(2, "Incorrect dispute ID");
 
-    const disputeData = await foreignProxy.disputeIDToDisputeDetails(2);
+    const disputeData = await foreignProxy.arbitratorDisputeIDToDisputeDetails(arbitrator.address, 2);
     expect(disputeData[0]).to.equal(0, "Incorrect arbitration ID in disputeData");
     expect(disputeData[1]).to.equal(await requester.getAddress(), "Incorrect requester address in disputeData");
 
