@@ -5,7 +5,7 @@ const paramsByChainId = {
     arbitratorExtraData:
       "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
     inbox: "0xaAe29B0366299461418F5324a79Afc425BE5ae21",
-    metaEvidence: "/ipfs/QmZdBkzD76TTusernqYosnZKGveHu39muv6ygvqjdEWrrW/metaevidence.json",
+    metaEvidence: "/ipfs/QmX4uAgcXJdLifAmZjt6VYP2Lwj91zZ3H6DLF68Yt1d7pr",
   },
   1: {
     arbitrator: "0x988b3a538b618c7a603e1c11ab82cd16dbe28069", // KlerosLiquid address
@@ -17,7 +17,7 @@ const paramsByChainId = {
 };
 
 // Note that values apply to both testnet and mainnet since fees are obvserved to be about the same on both chains as of mid 2024.
-const surplus = ethers.utils.parseUnits("0.05", "ether"); // This amount is at least x100 times higher than required amount to account for potential gas fee increase on L1. The surplus will be automatically reimbursed.
+const surplus = ethers.utils.parseUnits("0.03", "ether"); // The surplus will be automatically reimbursed when the dispute is created.
 const l2GasLimit = 1500000;
 const gasPriceBid = 1000000000; // x10000 bid of random arb sepolia tx. Gas price * gasLimit will result in additional 0.0015 eth fee for automatic-redeem on L2. The surplus will be reimbursed.
 const winnerMultiplier = 3000;

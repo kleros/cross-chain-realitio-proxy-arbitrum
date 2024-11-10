@@ -95,6 +95,7 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
     mapping(address => mapping(uint256 => DisputeDetails)) public arbitratorDisputeIDToDisputeDetails; // Maps external dispute ids from a particular arbitrator to local arbitration ID and requester who was able to complete the arbitration request.
     mapping(uint256 => bool) public arbitrationIDToDisputeExists; // Whether a dispute has already been created for the given arbitration ID or not.
     mapping(uint256 => address) public arbitrationIDToRequester; // Maps arbitration ID to the requester who was able to complete the arbitration request.
+    mapping(uint256 => uint256) public arbitrationCreatedBlock; // Block of dispute creation.
 
     event RetryableTicketCreated(uint256 indexed ticketId);
 
@@ -239,7 +240,7 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
 
     /**
      * @notice Changes loser multiplier for appeal period.
-     * @param _loserAppealPeriodMultiplier New loser multiplier for appeal perido.
+     * @param _loserAppealPeriodMultiplier New loser multiplier for appeal period.
      */
     function changeLoserAppealPeriodMultiplier(uint256 _loserAppealPeriodMultiplier) external onlyGovernor {
         loserAppealPeriodMultiplier = _loserAppealPeriodMultiplier;
@@ -302,6 +303,7 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
         ArbitrationRequest storage arbitration = arbitrationRequests[arbitrationID][_requester];
         require(arbitration.status == Status.Requested, "Invalid arbitration status");
 
+        // Arbitration cost can possibly change between when the request has been made and received, so evaluate once more.
         uint256 arbitrationCost = arbitration.arbitrator.arbitrationCost(arbitration.arbitratorExtraData);
         if (arbitration.deposit >= arbitrationCost) {
             try
@@ -313,6 +315,7 @@ contract RealitioForeignProxyArb is IForeignArbitrationProxy, IDisputeResolver {
 
                 arbitrationIDToDisputeExists[arbitrationID] = true;
                 arbitrationIDToRequester[arbitrationID] = _requester;
+                arbitrationCreatedBlock[disputeID] = block.number;
 
                 // At this point, arbitration.deposit is guaranteed to be greater than or equal to the arbitration cost.
                 uint256 remainder = arbitration.deposit - arbitrationCost;
