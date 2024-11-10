@@ -51,12 +51,8 @@ async function deployForeignProxy({ deployments, getChainId, ethers, config }) {
   const homeProxy = ethers.utils.getContractAddress(transaction);
   console.log(`Home proxy: ${homeProxy}`);
 
-  let governor;
-  if (chainId === 1) {
-    governor = "TODO"; // Determine later
-  } else {
-    governor = (await ethers.getSigners())[0].address;
-  }
+  // Initially have the deployer as governor, and change it later
+  const governor = (await ethers.getSigners())[0].address;
 
   const foreignProxy = await deploy("RealitioForeignProxyArb", {
     from: account.address,
