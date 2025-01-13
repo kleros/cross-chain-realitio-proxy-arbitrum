@@ -11,6 +11,7 @@ const paramsByChainId = {
     foreignChainId: 1,
   },
 };
+// For seer deployment change TOS
 const metadata =
   '{"tos":"ipfs://QmNV5NWwCudYKfiHuhdWxccrPyxs4DnbLGQace2oMKHkZv/Question_Resolution_Policy.pdf", "foreignProxy":true}'; // Same for all chains.
 

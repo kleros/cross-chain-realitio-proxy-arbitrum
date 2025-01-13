@@ -11,7 +11,8 @@ const paramsByChainId = {
     arbitrator: "0x988b3a538b618c7a603e1c11ab82cd16dbe28069", // KlerosLiquid address
     arbitratorExtraData:
       "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001f", // General Court - 31 jurors
-    inbox: "0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f", // https://docs.arbitrum.io/build-decentralized-apps/reference/useful-addresses
+    inbox: "0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f", // https://docs.arbitrum.io/build-decentralized-apps/reference/contract-addresses
+    // Don't forget to change primary for Seer
     metaEvidence: "TODO", // Need to reupload with different chain ids.
   },
 };
@@ -51,14 +52,10 @@ async function deployForeignProxy({ deployments, getChainId, ethers, config }) {
   const homeProxy = ethers.utils.getContractAddress(transaction);
   console.log(`Home proxy: ${homeProxy}`);
 
-  // Initially have the deployer as governor, and change it later
-  const governor = (await ethers.getSigners())[0].address;
-
   const foreignProxy = await deploy("RealitioForeignProxyArb", {
     from: account.address,
     args: [
       homeProxy,
-      governor,
       arbitrator,
       arbitratorExtraData,
       inbox,
